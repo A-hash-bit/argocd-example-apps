@@ -1,0 +1,36 @@
+pipeline {
+  agent any
+  stages {
+    
+    stage('Checkout') {
+      steps {
+        sh 'echo passed'
+        git branch: 'master', url: 'https://github.com/A-hash-bit/argocd-example-apps.git'
+      }
+    }
+
+
+    stage('Update Deployment File') {
+        environment {
+            GIT_REPO_NAME = "argocd-example-apps"
+            GIT_USER_NAME = "A-hash-bit"
+        }
+        steps {
+            withCredentials([string(credentialsId: 'git-hub', variable: 'GITHUB_TOKEN')]) {
+                sh '''
+                    git config user.email "amardextra@gmail.com"
+                    git config user.name "Amar Deshmukh"
+                    BUILD_NUMBER=${BUILD_NUMBER}
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" guestbook/guestbook-ui-deployment.yaml
+                    git add guestbook/guestbook-ui-deployment.yaml
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:master
+                '''
+            }
+        }
+    }
+  }
+}
+-----------------READ ME--------------------
+  Before 'Update Deployment File' step we will create a docker image with build number and then push that tag(build no) to registry and update deployment so that
+  Argo can update k8s cluster.
